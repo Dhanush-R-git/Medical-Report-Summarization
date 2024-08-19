@@ -1,0 +1,13 @@
+Flask
+PyMuPDF
+numpy
+spacy
+reportlab
+langchain
+langchain-huggingface
+langchain-community
+langchain-core 
+googletrans
+SpeechRecognition
+chromadb
+flask_pymongo
