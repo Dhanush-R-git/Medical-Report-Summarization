@@ -19,7 +19,7 @@ app.config["MONGO_URI"] = "mongodb://localhost:27017/reportdb"
 mongo = PyMongo(app)
 
 # Initialize HuggingFace model
-HUGGINGFACEHUB_API_TOKEN = "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"
+HUGGINGFACEHUB_API_TOKEN = "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"
 os.environ['HUGGINGFACEHUB_API_TOKEN'] = HUGGINGFACEHUB_API_TOKEN
 
 repo_id = "mistralai/Mistral-7B-Instruct-v0.3"
@@ -264,6 +264,7 @@ def upload_file():
     except Exception as e:
         logging.error(f"Error in QA chain or PDF generation: {e}")
         return jsonify({'message': 'Error generating summary.'}), 500
+    
     
     return render_template('index.html', summary=pdf_summary)
 

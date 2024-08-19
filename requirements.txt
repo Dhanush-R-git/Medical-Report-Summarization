@@ -11,3 +11,6 @@ googletrans
 SpeechRecognition
 chromadb
 flask_pymongo
+pdfplumber
+fpdf
+pypdf
