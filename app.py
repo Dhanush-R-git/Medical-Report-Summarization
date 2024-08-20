@@ -19,10 +19,10 @@ app.config["MONGO_URI"] = "mongodb://localhost:27017/reportdb"
 mongo = PyMongo(app)
 
 # Initialize HuggingFace model
-HUGGINGFACEHUB_API_TOKEN = "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"
+HUGGINGFACEHUB_API_TOKEN = "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"
 os.environ['HUGGINGFACEHUB_API_TOKEN'] = HUGGINGFACEHUB_API_TOKEN
 
-repo_id = "mistralai/Mistral-7B-Instruct-v0.3"
+repo_id = "mistralai/Mistral-7B-Instruct-v0.2"
 llm = HuggingFaceEndpoint(repo_id=repo_id, max_length=1024, temperature=0.3, token=os.getenv('HUGGINGFACEHUB_API_TOKEN'))
 
 # Define the prompt template
@@ -69,7 +69,7 @@ def login():
     password = request.form['password']
 
     credentials = {
-        'tharunps': {
+        'medsum': {
             '123456': '/upload_doctor_report',
             '456789': '/upload_scan_report',
             '789123': '/upload_blood_report',
