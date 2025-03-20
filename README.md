@@ -1,4 +1,4 @@
-# Medical Report Summarization System
+# Medscribe AI - web based application for Patient Report Insights
 
 ## Overview
 
