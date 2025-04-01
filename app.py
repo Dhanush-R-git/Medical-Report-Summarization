@@ -19,7 +19,7 @@ app.config["MONGO_URI"] = "mongodb://localhost:27017/reportdb"
 mongo = PyMongo(app)
 
 # Initialize HuggingFace model
-HUGGINGFACEHUB_API_TOKEN = "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"
+HUGGINGFACEHUB_API_TOKEN = "hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 os.environ['HUGGINGFACEHUB_API_TOKEN'] = HUGGINGFACEHUB_API_TOKEN
 
 repo_id = "mistralai/Mistral-7B-Instruct-v0.2"
