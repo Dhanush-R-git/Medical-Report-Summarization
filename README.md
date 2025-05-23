@@ -1,4 +1,4 @@
-# Medical Report Summarization System
+# Medscribe AI - web based application for Patient Report Insights
 
 ## Overview
 
@@ -102,7 +102,7 @@ The Medical Report Summarization System is a web-based application designed to f
 
 ## Contribution and Contact
 
-Contributions to the project are welcome. Please open issues or submit pull requests for enhancements or bug fixes. For any questions, contact [your-email@example.com](mailto:your-email@example.com).
+Contributions to the project are welcome. Please open issues or submit pull requests for enhancements or bug fixes. For any questions, contact [rdha21228.ad@rmkec.ac.in](mailto:rdha21228.ad@rmkec.ac.in).
 
 ## License
 
