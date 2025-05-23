@@ -1,7 +1,8 @@
 from flask_pymongo import PyMongo
-from flask import Flask, request, render_template, send_file, redirect, url_for, jsonify
-import os
+from flask import Flask, request, render_template, send_file, redirect, session, url_for, jsonify
+import os, smtplib
 import pdfplumber
+from email.message import EmailMessage
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain import PromptTemplate, LLMChain
@@ -11,18 +12,30 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 from pdf_generator import create_pdf
 import logging
+from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()  # reads .env into os.environ
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')  # Replace with a strong secret key
 
 # Configure MongoDB connection
-app.config["MONGO_URI"] = "mongodb://localhost:27017/reportdb"
+app.config["MONGO_URI"] = os.getenv('MONGO_URI')
 mongo = PyMongo(app)
 
 # Initialize HuggingFace model
-HUGGINGFACEHUB_API_TOKEN = "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"
-os.environ['HUGGINGFACEHUB_API_TOKEN'] = HUGGINGFACEHUB_API_TOKEN
+os.environ['HUGGINGFACEHUB_API_TOKEN'] = os.getenv('HUGGINGFACEHUB_API_TOKEN')
 
-repo_id = "mistralai/Mistral-7B-Instruct-v0.2"
+# Mail config
+app.config.update(
+    MAIL_SERVER   = os.getenv('MAIL_SERVER', 'localhost'),
+    MAIL_PORT     = int(os.getenv('MAIL_PORT', 25)),
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME'),
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD'),
+    MAIL_USE_TLS  = os.getenv('MAIL_USE_TLS', 'False').lower() in ('1','true','yes')
+)
+
+repo_id = "mistralai/Mistral-7B-Instruct-v0.3"
 llm = HuggingFaceEndpoint(repo_id=repo_id, max_length=1024, temperature=0.3, token=os.getenv('HUGGINGFACEHUB_API_TOKEN'))
 
 # Define the prompt template
@@ -58,8 +71,9 @@ prompt = PromptTemplate(
 )
 llm_chain = LLMChain(prompt=prompt, llm=llm)
 
+# --- Authentication & session management ---
 # Route for the login page
-@app.route('/')
+@app.route('/', methods=['GET'])
 def home():
     return render_template('login.html')
 
@@ -79,9 +93,27 @@ def login():
     }
 
     if username in credentials and password in credentials[username]:
+        session['logged_in'] = True
+        session['user'] = username
+        session['role'] = 'doctor'  # only doctors reach these routes
         return redirect(credentials[username][password])
     else:
         return 'Invalid username or password', 403
+    
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
+def doctor_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in') or session.get('role') != 'doctor':
+            return redirect(url_for('home'))
+        return f(*args, **kwargs)
+    return decorated
+
 
 # Routes for uploading reports
 @app.route('/upload_doctor_report', methods=['GET', 'POST'])
@@ -183,13 +215,18 @@ def create_patient():
 
 # Upload and summary route
 @app.route('/index', methods=['GET'])
+@doctor_required
 def index():
-    return render_template('index.html')
+    # fetch all experts to show in panel
+    experts = list(mongo.db.experts.find({}, {'_id': 0}))
+    return render_template('index.html', experts=experts, summary=None, patient_id='')
 
 logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/upload', methods=['POST'])
+@doctor_required
 def upload_file():
+    experts = list(mongo.db.experts.find({}, {'_id': 0}))
     patient_id = request.form.get('patientId')
     if not patient_id:
         return jsonify({'message': 'Patient ID is required'}), 400
@@ -258,19 +295,87 @@ def upload_file():
         response = qa_chain("Create a full medical summary that covers the patient's history, diagnosis, treatment, and current status")
         pdf_summary = response["result"]
 
-        pdf_path = os.path.join('uploads', 'summary.pdf')
+        pdf_path = os.path.join('uploads', f'summary_{patient_id}_{int(datetime.utcnow().timestamp())}.pdf')
         create_pdf(pdf_summary, pdf_path)
         logging.debug("Summary PDF generated successfully.")
     except Exception as e:
         logging.error(f"Error in QA chain or PDF generation: {e}")
         return jsonify({'message': 'Error generating summary.'}), 500
+    # persist summary record in DB
+    mongo.db.summaries.insert_one({
+        'patient_id': patient_id,
+        'summary': pdf_summary,
+        'pdf_path': pdf_path,
+        'timestamp': datetime.utcnow()
+    })
     
-    
-    return render_template('index.html', summary=pdf_summary)
+    return render_template('index.html', summary=pdf_summary, experts=experts, patientId=patient_id)
 
-@app.route('/download')
-def download_file():
-    return send_file('uploads/summary.pdf', as_attachment=True)
+@app.route('/download/<path:filename>')
+@doctor_required
+def download_file(filename):
+    return send_file(filename, as_attachment=True)
 
+# --- New Medical Summaries page ---
+@app.route('/medical_summaries', methods=['GET', 'POST'])
+@doctor_required
+def medical_summaries():
+    summaries = None
+    if request.method == 'POST':
+        pid = request.form.get('patientId')
+        raw = mongo.db.summaries.find({'patient_id': pid}).sort('timestamp', -1)
+
+        summaries = []
+        for s in raw:
+            ts = s.get('timestamp')
+            if ts:
+                date_str = ts.strftime('%Y-%m-%d %H:%M')
+            else:
+                date_str = 'N/A'
+            summaries.append({
+                'date': date_str,
+                'excerpt': s.get('summary', '')[:100] + ('…' if s.get('summary') and len(s.get('summary')) > 100 else ''),
+                'pdf_path': s.get('pdf_path', '')
+            })
+
+    return render_template('medical_summaries.html', summaries=summaries)
+
+@app.route('/send_expert_email', methods=['POST'])
+@doctor_required
+def send_expert_email():
+    data         = request.json or {}
+    patient_id   = data.get('patientId')
+    expert_email = data.get('expertEmail')
+    summary_text = data.get('summaryText')
+
+    if not (patient_id and expert_email and summary_text):
+        return jsonify({'message': 'Missing data'}), 400
+
+    # Build email
+    msg = EmailMessage()
+    msg['Subject'] = f"MediSum: Analysis request for Patient {patient_id}"
+    msg['From']    = app.config['MAIL_USERNAME'] or 'no-reply@medisum.com'
+    msg['To']      = expert_email
+    msg.set_content(
+        f"Dear Specialist,\n\n"
+        f"You have been requested to review the medical summary for patient {patient_id}.\n\n"
+        f"--- Summary ---\n{summary_text}\n\n"
+        f"Please reply with your expert analysis.\n\n"
+        "Regards,\nMediSum Team"
+    )
+
+    try:
+        # Connect to real SMTP server
+        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=10)
+        if app.config['MAIL_USE_TLS']:
+            server.starttls()
+        if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
+            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        server.send_message(msg)
+        server.quit()
+        return jsonify({'message': 'Email sent successfully'})
+    except Exception as e:
+        logging.error(f"Email error: {e}")
+        return jsonify({'message': 'Failed to send email: ' + str(e)}), 500
 if __name__ == '__main__':
     app.run(debug=True)

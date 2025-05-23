@@ -436,3 +436,113 @@ footer a:hover {
 .social-icon:hover {
   color: var(--main-color);
 }
+
+/* Medical Summaries Table */
+.summary-table {
+  width: 100%;
+  max-width: 800px;
+  margin: 30px auto;
+  border-collapse: collapse;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.summary-table thead {
+  background-color: var(--main-color);
+  color: var(--secondary-color);
+}
+
+.summary-table thead th {
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 16px;
+}
+
+.summary-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.3s;
+}
+
+.summary-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.summary-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+.summary-table tbody td {
+  padding: 12px 15px;
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+.summary-table tbody td a {
+  color: var(--first-color);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.summary-table tbody td a:hover {
+  text-decoration: underline;
+}
+
+/* Make it responsive */
+@media (max-width: 600px) {
+  .summary-table thead {
+    display: none;
+  }
+  .summary-table,
+  .summary-table tbody,
+  .summary-table tr,
+  .summary-table td {
+    display: block;
+    width: 100%;
+  }
+  .summary-table tr {
+    margin-bottom: 15px;
+  }
+  .summary-table td {
+    text-align: right;
+    padding-left: 50%;
+    position: relative;
+  }
+  .summary-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 15px;
+    width: calc(50% - 30px);
+    white-space: nowrap;
+    font-weight: bold;
+    text-align: left;
+  }
+}
+
+/* Expert Analysis Toggle */
+.expert-toggle-container {
+  text-align: center;
+  margin: 40px 0 20px;
+}
+.expert-toggle-container label {
+  font-size: 18px;
+  color: var(--text-color);
+}
+
+/* Expert Panel */
+.expert-panel {
+  max-width: 800px;
+  margin: 0 auto 60px;
+  padding: 20px;
+  background: #fff;
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.expert-panel h2 {
+  margin-top: 0;
+  color: var(--main-color);
+}
+
+/* reuses .summary-table styles for consistency */

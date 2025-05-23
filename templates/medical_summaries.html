@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Medical Summaries</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+  <header>
+    <div class="logo">MediSum</div>
+    <nav>
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('medical_summaries') }}">Medical Summaries</a>
+      <a href="{{ url_for('logout') }}">Log Out</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1>Patient Summary History</h1>
+    <form method="post">
+      <label for="patient-id">Enter Patient ID:</label>
+      <input type="text" id="patient-id" name="patientId" placeholder="e.g. PAT0001" required />
+      <button type="submit" class="custom-submit-button">Lookup</button>
+    </form>
+
+    {% if summaries is not none %}
+      {% if summaries %}
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Summary Excerpt</th>
+              <th>Download</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in summaries %}
+            <tr>
+                <td data-label="Date">{{ s.date }}</td>
+                <td data-label="Summary Excerpt">{{ s.excerpt }}</td>
+                <td data-label="Download">
+                <a href="{{ url_for('download_file', filename=s.pdf_path) }}">PDF</a>
+                </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No summaries found for that patient.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <footer>
+    <p>&copy; 2025 MediSum</p>
+  </footer>
+</body>
+</html>
