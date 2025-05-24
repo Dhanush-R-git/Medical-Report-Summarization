@@ -17,12 +17,14 @@
   </header>
 
   <div class="container">
-    <h1>Patient Summary History</h1>
-    <form method="post">
-      <label for="patient-id">Enter Patient ID:</label>
-      <input type="text" id="patient-id" name="patientId" placeholder="e.g. PAT0001" required />
-      <button type="submit" class="custom-submit-button">Lookup</button>
-    </form>
+    <div class="patient1-id-card">
+      <h1>Patient Summary History</h1>
+      <form method="post" class="patient1-id-form">
+        <label for="patient-id">Enter Patient ID:</label>
+        <input type="text" id="patient-id" name="patientId" placeholder="e.g. PAT0001" required />
+        <button type="submit" class="custom1-submit-button">Lookup</button>
+      </form>
+    </div>
 
     {% if summaries is not none %}
       {% if summaries %}

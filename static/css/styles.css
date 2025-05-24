@@ -545,4 +545,38 @@ footer a:hover {
   color: var(--main-color);
 }
 
+.patient1-id-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 2rem 2.5rem;
+  max-width: 400px;
+  margin: 2rem auto 2rem auto;
+  text-align: center;
+}
+.patient1-id-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+.patient1-id-form input[type="text"] {
+  width: 80%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+.custom1-submit-button {
+  padding: 0.5em 1.5em;
+  background: #007bff;
+  color: #fff;
+  border-radius: 5px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.custom1-submit-button:hover {
+  background: #0056b3;
+}
 /* reuses .summary-table styles for consistency */
