@@ -1,4 +1,5 @@
 from flask_pymongo import PyMongo
+from pymongo import MongoClient
 from flask import Flask, request, render_template, send_file, redirect, session, url_for, jsonify
 import os, smtplib
 import pdfplumber
@@ -20,8 +21,14 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')  # Replace with a strong secret key
 
 # Configure MongoDB connection
-app.config["MONGO_URI"] = os.getenv('MONGO_URI')
-mongo = PyMongo(app)
+#app.config["MONGO_URI"] = os.getenv('MONGO_URI')
+#mongo = PyMongo(app)
+
+# Configure MongoDB connection via Cosmos DB for Mongo API
+mongo_uri = os.getenv('MONGO_URI')
+client = MongoClient(mongo_uri)
+# Explicitly grab the database named “reportdb”
+db = client["reportdb"]
 
 # Initialize HuggingFace model
 os.environ['HUGGINGFACEHUB_API_TOKEN'] = os.getenv('HUGGINGFACEHUB_API_TOKEN')
@@ -130,14 +137,14 @@ def upload_doctor_report():
         if not patient_id or not report_file:
             return jsonify({'message': 'Patient ID and report file are required'}), 400
 
-        patient = mongo.db.patients.find_one({'patient_id': patient_id})
+        patient = db.patients.find_one({'patient_id': patient_id})
         if not patient:
             return jsonify({'message': 'Patient ID not found. Please create the patient first.'}), 400
 
         file_path = os.path.join('uploads', 'doctor_reports', report_file.filename)
         report_file.save(file_path)
         
-        mongo.db.patients.update_one(
+        db.patients.update_one(
             {'patient_id': patient_id},
             {'$set': {'doctor_report': file_path}},
             upsert=True
@@ -154,14 +161,14 @@ def upload_scan_report():
         if not patient_id or not report_file:
             return jsonify({'message': 'Patient ID and report file are required'}), 400
 
-        patient = mongo.db.patients.find_one({'patient_id': patient_id})
+        patient = db.patients.find_one({'patient_id': patient_id})
         if not patient:
             return jsonify({'message': 'Patient ID not found. Please create the patient first.'}), 404
         
         file_path = os.path.join('uploads', 'scan_reports', report_file.filename)
         report_file.save(file_path)
         
-        mongo.db.patients.update_one(
+        db.patients.update_one(
             {'patient_id': patient_id},
             {'$set': {'scan_report': file_path}},
             upsert=True
@@ -178,14 +185,14 @@ def upload_blood_report():
         if not patient_id or not report_file:
             return jsonify({'message': 'Patient ID and report file are required'}), 400
 
-        patient = mongo.db.patients.find_one({'patient_id': patient_id})
+        patient = db.patients.find_one({'patient_id': patient_id})
         if not patient:
             return jsonify({'message': 'Patient ID not found. Please create the patient first.'}), 404
         
         file_path = os.path.join('uploads', 'blood_reports', report_file.filename)
         report_file.save(file_path)
         
-        mongo.db.patients.update_one(
+        db.patients.update_one(
             {'patient_id': patient_id},
             {'$set': {'blood_report': file_path}},
             upsert=True
@@ -202,10 +209,11 @@ def create_patient():
         address = request.form['address']
         phone = request.form['phone']
         
-        patient_id = mongo.db.patients.count_documents({}) + 1
-        patient_id = f'PAT{patient_id:04}'
+        count = db.patients.count_documents({}) + 1
+        patient_id = f'PAT{count+1:04}'
         
-        mongo.db.patients.insert_one({
+        db.patients.insert_one({
+            "categoryid1": patient_id,
             'patient_id': patient_id,
             'name': name,
             'email': email,
@@ -224,7 +232,7 @@ def create_patient():
 @doctor_required
 def index():
     # fetch all experts to show in panel
-    experts = list(mongo.db.experts.find({}, {'_id': 0}))
+    experts = list(db.experts.find({}, {'_id': 0}))
     return render_template('index.html', experts=experts, summary=None, patient_id='')
 
 logging.basicConfig(level=logging.DEBUG)
@@ -232,12 +240,12 @@ logging.basicConfig(level=logging.DEBUG)
 @app.route('/upload', methods=['POST'])
 @doctor_required
 def upload_file():
-    experts = list(mongo.db.experts.find({}, {'_id': 0}))
+    experts = list(db.experts.find({}, {'_id': 0}))
     patient_id = request.form.get('patientId')
     if not patient_id:
         return jsonify({'message': 'Patient ID is required'}), 400
 
-    patient = mongo.db.patients.find_one({'patient_id': patient_id})
+    patient = db.patients.find_one({'patient_id': patient_id})
     if not patient:
         return jsonify({'message': 'Patient ID not found. Please create the patient first.'}), 404
 
@@ -308,7 +316,8 @@ def upload_file():
         logging.error(f"Error in QA chain or PDF generation: {e}")
         return jsonify({'message': 'Error generating summary.'}), 500
     # persist summary record in DB
-    mongo.db.summaries.insert_one({
+    db.summaries.insert_one({
+        "categoryid1": patient_id,
         'patient_id': patient_id,
         'summary': pdf_summary,
         'pdf_path': pdf_path,
@@ -329,7 +338,7 @@ def medical_summaries():
     summaries = None
     if request.method == 'POST':
         pid = request.form.get('patientId')
-        raw = mongo.db.summaries.find({'patient_id': pid}).sort('timestamp', -1)
+        raw = db.summaries.find({'patient_id': pid}).sort('timestamp', -1)
 
         summaries = []
         for s in raw:
