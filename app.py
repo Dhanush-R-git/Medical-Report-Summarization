@@ -36,7 +36,13 @@ app.config.update(
 )
 
 repo_id = "mistralai/Mistral-7B-Instruct-v0.3"
-llm = HuggingFaceEndpoint(repo_id=repo_id, max_length=1024, temperature=0.3, token=os.getenv('HUGGINGFACEHUB_API_TOKEN'))
+llm = HuggingFaceEndpoint(
+    repo_id=repo_id,
+    task="summarization",
+    max_length=1024, 
+    temperature=0.3, 
+    token=os.getenv('HUGGINGFACEHUB_API_TOKEN')
+    )
 
 # Define the prompt template
 prompt_template = """
